@@ -11,7 +11,7 @@ check: ## Run code quality tools.
 	@echo "🚀 Linting code: Running pre-commit"
 	@uv run pre-commit run -a
 	@echo "🚀 Static type checking: Running ty"
-	@uv run ty check
+	@uv run ty check src/
 	@echo "🚀 Checking for obsolete dependencies: Running deptry"
 	@uv run deptry src
 
@@ -29,6 +29,11 @@ build: clean-build ## Build wheel file
 clean-build: ## Clean build artifacts
 	@echo "🚀 Removing build artifacts"
 	@uv run python -c "import shutil; import os; shutil.rmtree('dist') if os.path.exists('dist') else None"
+
+.PHONY: experiment
+experiment: ## Run TRAK experiment for all models and layer configs
+	@echo "🚀 Running TRAK experiment"
+	@uv run python -m layertrak.experiments.run_trak
 
 .PHONY: help
 help:
