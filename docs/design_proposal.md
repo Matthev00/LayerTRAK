@@ -7,7 +7,7 @@
 * **Trening modeli bazowych:** Wytrenowanie trzech modeli (ResNet-18, ResNet-34, MobileNetV2) na pełnym zbiorze danych.
 * Implementacja TRAK z selektywnym wyborem parametrów — zunifikowane konfiguracje warstw: Head-only, Late, Mid+Late, Early.
 * **Budowa Ensemble'u do LDS:** Wytrenowanie po 20 modeli pomocniczych dla każdej architektury na losowych podzbiorach (50% danych).
-* Analiza porównawcza korelacji LDS w zależności od architektury i zakresu śledzonych warstw.
+* Analiza porównawcza TREK-LDS w zależności od architektury i zakresu śledzonych warstw.
 
 ---
 
@@ -19,7 +19,7 @@
 | **W2** | 30.03 – 05.04 | Trening głównych modeli na pełnym zbiorze. Implementacja bazowej metody TRAK (gradienty). | **02.04 (Cz): PROTOTYP** |
 | **W3** | 06.04 – 12.04 | Generowanie masek podziału danych. Start treningu ensemble (modele pomocnicze do LDS). | Intensywne użycie GPU |
 | **W4** | 13.04 – 19.04 | Kontynuacja treningu modeli pomocniczych. Pierwsze testy korelacji LDS dla ResNet-18. | **16.04 (Cz): Standup 1** |
-| **W5** | 20.04 – 26.04 | Przeliczanie LDS dla różnych konfiguracji warstw (Top-only vs Late-fusion) we wszystkich modelach. | Zbieranie wyników |
+| **W5** | 20.04 – 26.04 | Przeliczanie LDS dla różnych konfiguracji warstwwe wszystkich modelach. | Zbieranie wyników |
 | **W6** | 27.04 – 03.05 | **MAJÓWKA – Odpoczynek i regeneracja.** | **Czas wolny** |
 | **W7** | 04.05 – 10.05 | Analiza porównawcza: wpływ głębokości sieci na stabilność metody TRAK w róznych warstwach. | **07.05 (Cz): Standup 2** |
 | **W8** | 11.05 – 17.05 | Finalizacja eksperymentów, generowanie wykresów zbiorczych i map wpływu (attribution maps). | Dokumentacja |
@@ -45,8 +45,8 @@ Każda architektura ma hierarchiczną ekstrakcję cech. Definiujemy 4 konfigurac
 | :--- | :--- | :--- |
 | **Head-only** | `fc` | `classifier` |
 | **Late** | `layer4` + `fc` | `features[14:]` + `classifier` |
-| **Mid+Late** | `layer3` + `layer4` + `fc` | `features[7:]` + `classifier` |
-| **Early** | `conv1` + `layer1` + `layer2` | `features[:7]` |
+| **Mid+Late** | `layer3` | `features[7:14]` |
+| **Early** | `conv1` + `layer1` | `features[:7]` |
 
 ---
 
