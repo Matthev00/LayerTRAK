@@ -16,7 +16,7 @@ Zbadanie skuteczności metody **TRAK** (Tracing with the Randomly-Projected Afte
 * **Trening modeli bazowych:** Wytrenowanie trzech modeli (ResNet-18, ResNet-34, MobileNetV2) na pełnym zbiorze danych.
 * Implementacja TRAK z selektywnym wyborem parametrów — zunifikowane konfiguracje warstw: Head-only, Late, Mid+Late, Early.
 * **Budowa Ensemble'u do LDS:** Wytrenowanie po 40 modeli pomocniczych dla każdej architektury na losowych podzbiorach (50% danych).
-* Analiza porównawcza TREK-LDS w zależności od architektury i zakresu śledzonych warstw.
+* Analiza porównawcza TRAK-LDS w zależności od architektury i zakresu śledzonych warstw.
 
 ## Harmonogram
 
@@ -108,7 +108,7 @@ Obliczenia zostaną przeprowadzone z użyciem pojedynczej karty graficznej NVIDI
 
 * **Trening modeli bazowych (100% danych, 30 epok):** 3 modele $\times$ (30 epok $\times$ 20s) = ok. **30 minut**.
 * **Trening modeli pomocniczych do ewaluacji LDS** (120 modeli, 50% zbioru danych, 30 epok): 120 $\times$ (30 epok $\times$ 15s) = ok. **15 godzin**
-* **Ekstrakcja wpływu (TRAK)**: 112 niezależnych przebiegów algorytmu (3 wytrenowane modele bazowe $\times$ 4 badane konfiguracje warstw). Operacja ta wykorzystuje metodę rzutowań losowych i opiera się głównie na szybkiej inferencji. Szacowany czas to ok. **1,5 do 2 godzin**.
+* **Ekstrakcja wpływu (TRAK)**: 12 niezależnych przebiegów algorytmu (3 wytrenowane modele bazowe $\times$ 4 badane konfiguracje warstw). Operacja ta wykorzystuje metodę rzutowań losowych i opiera się głównie na szybkiej inferencji. Szacowany czas to ok. **1,5 do 2 godzin**.
 
 **Całkowity szacowany budżet czasowy eksperymentów:** ok. 17,5 godziny ciągłej pracy GPU.
 
