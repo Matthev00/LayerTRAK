@@ -108,7 +108,7 @@ Obliczenia zostaną przeprowadzone z użyciem pojedynczej karty graficznej NVIDI
 
 * **Trening modeli bazowych (100% danych, 30 epok):** 3 modele $\times$ (30 epok $\times$ 20s) = ok. **30 minut**.
 * **Trening modeli pomocniczych do ewaluacji LDS** (120 modeli, 50% zbioru danych, 30 epok): 120 $\times$ (30 epok $\times$ 15s) = ok. **15 godzin**
-* **Ekstrakcja wpływu (TRAK)**: 112 niezależnych przebiegów algorytmu (3 wytrenowane modele bazowe $\times$ 4 badane konfiguracje warstw). Operacja ta wykorzystuje metodę rzutowań losowych i opiera się głównie na szybkiej inferencji. Szacowany czas to ok. **1,5 do 2 godzin**.
+* **Ekstrakcja wpływu (TRAK)**: 12 niezależnych przebiegów algorytmu (3 wytrenowane modele bazowe $\times$ 4 badane konfiguracje warstw). Operacja ta wykorzystuje metodę rzutowań losowych i opiera się głównie na szybkiej inferencji. Szacowany czas to ok. **1,5 do 2 godzin**.
 
 **Całkowity szacowany budżet czasowy eksperymentów:** ok. 17,5 godziny ciągłej pracy GPU.
 
