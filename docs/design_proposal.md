@@ -16,7 +16,7 @@ Zbadanie skuteczności metody **TRAK** (Tracing with the Randomly-Projected Afte
 * **Trening modeli bazowych:** Wytrenowanie trzech modeli (ResNet-18, ResNet-34, MobileNetV2) na pełnym zbiorze danych.
 * Implementacja TRAK z selektywnym wyborem parametrów — zunifikowane konfiguracje warstw: Head-only, Late, Mid+Late, Early.
 * **Budowa Ensemble'u do LDS:** Wytrenowanie po 40 modeli pomocniczych dla każdej architektury na losowych podzbiorach (50% danych).
-* Analiza porównawcza TREK-LDS w zależności od architektury i zakresu śledzonych warstw.
+* Analiza porównawcza TRAK-LDS w zależności od architektury i zakresu śledzonych warstw.
 
 ## Harmonogram
 
