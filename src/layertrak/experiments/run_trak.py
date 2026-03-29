@@ -2,6 +2,11 @@ import numpy as np
 import torch
 
 from layertrak.data import get_dataloaders
+from layertrak.experiments.results_io import (
+    make_run_dir,
+    save_config_artifacts,
+    write_overview_csv,
+)
 from layertrak.experiments.trak import LayerTRAKRunner
 from layertrak.models.layers import get_grad_wrt, get_layer_configs
 from layertrak.models.model_factory import ModelName, create_model
@@ -19,10 +24,12 @@ def run_experiment() -> dict[str, dict[str, np.ndarray]]:
     """
     train_loader, test_loader, targets_loader = get_dataloaders()
     train_set_size = len(train_loader.dataset)  # type: ignore[arg-type]
-    results_dir = settings.project_root / settings.trak_results_dir
-    results_dir.mkdir(parents=True, exist_ok=True)
+    results_root = settings.project_root / settings.trak_results_dir
+    results_root.mkdir(parents=True, exist_ok=True)
+    run_dir = make_run_dir(results_root)
 
     all_scores: dict[str, dict[str, np.ndarray]] = {}
+    overview_rows: list[dict[str, object]] = []
 
     for arch in ARCHITECTURES:
         print(f"\n{'=' * 60}")
@@ -58,7 +65,8 @@ def run_experiment() -> dict[str, dict[str, np.ndarray]]:
             print(f"  Prefixes: {prefixes}")
             print(f"  Params tracked: {num_params:,}")
 
-            save_dir = results_dir / f"{arch}_{config_name}"
+            artifact_dir = run_dir / arch / config_name
+            save_dir = artifact_dir / "trak_tmp"
 
             runner = LayerTRAKRunner(
                 model=model,
@@ -77,13 +85,25 @@ def run_experiment() -> dict[str, dict[str, np.ndarray]]:
             arch_scores[config_name] = scores
             print(f"  Scores shape: {scores.shape}")
 
-            np.save(results_dir / f"{arch}_{config_name}_scores.npy", scores)
+            overview_rows.append(save_config_artifacts(
+                artifact_dir,
+                scores=scores,
+                architecture=arch,
+                config_name=config_name,
+                prefixes=prefixes,
+                num_tracked_params=num_params,
+                num_targets=settings.num_targets,
+                train_set_size=train_set_size,
+                checkpoint_path=checkpoint_path,
+            ))
 
         all_scores[arch] = arch_scores
 
+    write_overview_csv(run_dir / "overview.csv", overview_rows)
+
     print(f"\n{'=' * 60}")
     print("All experiments complete.")
-    print(f"Results saved to: {results_dir}")
+    print(f"Results saved to: {run_dir}")
     return all_scores
 
 
