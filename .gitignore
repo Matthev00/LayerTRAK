@@ -214,3 +214,4 @@ trak_results/
 data/
 checkpoints/
 docs/design_proposal.md
+wandb

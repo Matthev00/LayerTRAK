@@ -30,6 +30,11 @@ clean-build: ## Clean build artifacts
 	@echo "🚀 Removing build artifacts"
 	@uv run python -c "import shutil; import os; shutil.rmtree('dist') if os.path.exists('dist') else None"
 
+.PHONY: train
+train: ## Train all base models and save checkpoints
+	@echo "🚀 Training base models"
+	@uv run python -m layertrak.experiments.train_base_models
+
 .PHONY: experiment
 experiment: ## Run TRAK experiment for all models and layer configs
 	@echo "🚀 Running TRAK experiment"
