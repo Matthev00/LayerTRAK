@@ -3,7 +3,6 @@ from typing import Literal
 import torch.nn as nn
 from torchvision import models
 
-
 ResNetVariant = Literal["resnet18", "resnet34"]
 
 _BUILDERS = {

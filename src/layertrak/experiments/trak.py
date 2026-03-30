@@ -50,7 +50,7 @@ class LayerTRAKRunner:
         self._needs_cpu_cast = source_device == "mps"
 
         trak_model = copy.deepcopy(model).to(self._trak_device)
-        self._checkpoint = {k: v.to(self._trak_device) for k, v in checkpoint.items()}
+        self._checkpoint: dict[str, torch.Tensor] = {k: v.to(self._trak_device) for k, v in checkpoint.items()}
         trak_model.load_state_dict(self._checkpoint)
         trak_model.eval()
 
@@ -73,7 +73,7 @@ class LayerTRAKRunner:
 
     def featurize(self, train_loader: DataLoader) -> None:
         """Featurize the entire training set."""
-        self._traker.load_checkpoint(self._checkpoint.values(), model_id=0)
+        self._traker.load_checkpoint(self._checkpoint, model_id=0)  # type: ignore[arg-type]
         for batch in tqdm(train_loader, desc="Featurizing", leave=False):
             batch = self._cast_batch(batch)
             self._traker.featurize(batch=batch, num_samples=batch[0].shape[0])
@@ -98,7 +98,7 @@ class LayerTRAKRunner:
         """
         self._traker.start_scoring_checkpoint(
             exp_name=exp_name,
-            checkpoint=self._checkpoint.values(),
+            checkpoint=self._checkpoint,  # type: ignore[arg-type]
             model_id=0,
             num_targets=num_targets,
         )
