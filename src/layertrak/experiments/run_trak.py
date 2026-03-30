@@ -39,7 +39,9 @@ def run_experiment() -> dict[str, dict[str, np.ndarray]]:
             print(f"Training {arch} from pretrained weights...")
             model = create_model(arch, device=settings.device)
             checkpoint = train_model(
-                model, train_loader, test_loader,
+                model,
+                train_loader,
+                test_loader,
                 device=settings.device,
                 run_name=arch,
             )
@@ -51,9 +53,7 @@ def run_experiment() -> dict[str, dict[str, np.ndarray]]:
             config_name = config["name"]
             prefixes = config["prefixes"]
             grad_wrt = get_grad_wrt(model, prefixes)
-            num_params = sum(
-                p.numel() for n, p in model.named_parameters() if n in grad_wrt
-            )
+            num_params = sum(p.numel() for n, p in model.named_parameters() if n in grad_wrt)
             print(f"\n--- {arch}/{config_name} ---")
             print(f"  Prefixes: {prefixes}")
             print(f"  Params tracked: {num_params:,}")

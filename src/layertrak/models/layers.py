@@ -61,7 +61,4 @@ def get_grad_wrt(model: nn.Module, prefixes: list[str]) -> list[str]:
     Returns:
         List of matching parameter names for use with TRAKer's grad_wrt.
     """
-    return [
-        name for name, _ in model.named_parameters()
-        if any(name.startswith(p) for p in prefixes)
-    ]
+    return [name for name, _ in model.named_parameters() if any(name.startswith(p) for p in prefixes)]

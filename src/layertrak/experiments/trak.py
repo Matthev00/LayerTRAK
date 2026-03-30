@@ -73,7 +73,7 @@ class LayerTRAKRunner:
 
     def featurize(self, train_loader: DataLoader) -> None:
         """Featurize the entire training set."""
-        self._traker.load_checkpoint(self._checkpoint.values(), model_id=0)
+        self._traker.load_checkpoint(self._checkpoint, model_id=0)  # type: ignore[arg-type]
         for batch in tqdm(train_loader, desc="Featurizing", leave=False):
             batch = self._cast_batch(batch)
             self._traker.featurize(batch=batch, num_samples=batch[0].shape[0])

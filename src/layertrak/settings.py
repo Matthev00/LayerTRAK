@@ -5,6 +5,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     """Global project settings loaded from env / .env file."""
+
     project_root: Path = Path(__file__).resolve().parents[2]
     data_dir: Path = Path("data")
     trak_results_dir: Path = Path("trak_results")
