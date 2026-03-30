@@ -18,6 +18,7 @@ def train_model(
     num_epochs: int | None = None,
     checkpoint_dir: Path | None = None,
     run_name: str = "train",
+    save_per_epoch: bool = False,
 ) -> dict[str, torch.Tensor]:
     """Train a model on CIFAR-10 and return the final checkpoint.
 
@@ -29,6 +30,7 @@ def train_model(
         num_epochs: Number of epochs. Defaults to settings.num_epochs.
         checkpoint_dir: Directory to save the checkpoint. Defaults to settings path.
         run_name: Name for wandb run and checkpoint file.
+        save_per_epoch: If True, save checkpoint after each epoch. If False, save only final checkpoint.
 
     Returns:
         The model's state_dict after training.
@@ -81,10 +83,19 @@ def train_model(
         if wandb_run is not None:
             wandb.log(metrics, step=epoch)
 
-    checkpoint = model.state_dict()
-    save_path = checkpoint_dir / f"{run_name}.pt"
-    torch.save(checkpoint, save_path)
-    print(f"Checkpoint saved to {save_path}")
+        # Save checkpoint after each epoch if requested
+        if save_per_epoch:
+            checkpoint = model.state_dict()
+            save_path = checkpoint_dir / f"{run_name}_epoch_{epoch + 1:02d}.pt"
+            torch.save(checkpoint, save_path)
+            print(f"Checkpoint saved to {save_path}")
+
+    # Save final checkpoint if not saving per epoch
+    if not save_per_epoch:
+        checkpoint = model.state_dict()
+        save_path = checkpoint_dir / f"{run_name}.pt"
+        torch.save(checkpoint, save_path)
+        print(f"Checkpoint saved to {save_path}")
 
     if wandb_run is not None:
         wandb.finish()

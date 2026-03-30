@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from pydantic_settings import BaseSettings
+import torch
 
 
 class Settings(BaseSettings):
@@ -11,10 +12,10 @@ class Settings(BaseSettings):
     trak_results_dir: Path = Path("trak_results")
     checkpoints_dir: Path = Path("checkpoints")
 
-    device: str = "cpu"
+    device: str = "cuda" if torch.cuda.is_available() else "cpu"
     batch_size: int = 128
     num_workers: int = 0
-    num_epochs: int = 10
+    num_epochs: int = 30
     learning_rate: float = 1e-4
     weight_decay: float = 5e-4
     momentum: float = 0.9
