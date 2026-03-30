@@ -19,8 +19,8 @@ def train_all_base_models() -> None:
     for arch in ARCHITECTURES:
         checkpoint_path = checkpoint_dir / f"{arch}.pt"
 
-        if checkpoint_path.exists():
-            print(f"[{arch}] Checkpoint already exists at {checkpoint_path}, skipping.")
+        if checkpoint_path.exists() or list(checkpoint_dir.glob(f"{arch}_epoch_*.pt")):
+            print(f"[{arch}] Checkpoint already exists, skipping.")
             continue
 
         print(f"\n{'=' * 60}")
@@ -34,8 +34,8 @@ def train_all_base_models() -> None:
             test_loader,
             device=settings.device,
             run_name=arch,
+            save_per_epoch=True,
         )
-        print(f"[{arch}] Saved to {checkpoint_path}")
 
     print("\nAll base models trained.")
 
