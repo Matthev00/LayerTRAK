@@ -67,9 +67,8 @@ class LayerTRAKRunner:
         )
 
     def _cast_batch(self, batch: list[torch.Tensor]) -> list[torch.Tensor]:
-        if self._needs_cpu_cast:
-            return [x.cpu() for x in batch]
-        return batch
+        target_device = "cpu" if self._needs_cpu_cast else self._trak_device
+        return [x.to(target_device, non_blocking=True) for x in batch]
 
     def featurize(self, train_loader: DataLoader) -> None:
         """Featurize the entire training set."""
