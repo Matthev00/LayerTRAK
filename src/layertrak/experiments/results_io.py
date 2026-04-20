@@ -16,12 +16,13 @@ def make_run_dir(base_dir: Path) -> Path:
 
 def score_stats(scores: np.ndarray) -> dict[str, float]:
     """Compute summary statistics for a score matrix."""
-    percentiles = np.percentile(scores, [1, 5, 50, 95, 99])
+    stable_scores = scores.astype(np.float64, copy=False)
+    percentiles = np.percentile(stable_scores, [1, 5, 50, 95, 99])
     return {
-        "min": float(scores.min()),
-        "max": float(scores.max()),
-        "mean": float(scores.mean()),
-        "std": float(scores.std()),
+        "min": float(stable_scores.min()),
+        "max": float(stable_scores.max()),
+        "mean": float(stable_scores.mean()),
+        "std": float(stable_scores.std()),
         "p1": float(percentiles[0]),
         "p5": float(percentiles[1]),
         "p50": float(percentiles[2]),
@@ -88,7 +89,7 @@ def save_config_artifacts(
     scores: np.ndarray,
     architecture: str,
     config_name: str,
-    prefixes: list[str],
+    prefixes: list[str] | None,
     num_tracked_params: int,
     num_targets: int,
     train_set_size: int,
@@ -128,7 +129,7 @@ def save_config_artifacts(
         "scores_shape": "x".join(str(dim) for dim in scores.shape),
         "num_tracked_params": num_tracked_params,
         "checkpoint_path": str(checkpoint_path),
-        "prefixes": ",".join(prefixes),
+        "prefixes": "" if prefixes is None else ",".join(prefixes),
         "run_subdir": str(artifact_dir.relative_to(artifact_dir.parents[2])),
         **stats,
     }
