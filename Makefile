@@ -35,10 +35,27 @@ train: ## Train all base models and save checkpoints
 	@echo "🚀 Training base models"
 	@uv run python -m layertrak.experiments.train_base_models
 
+.PHONY: masks
+NUM_MASKS ?= 40
+TRAIN_SIZE ?= 50000
+SUBSET_RATIO ?= 0.5
+SEED ?= 42
+OUTPUT_DIR ?=
+
+masks: ## Generate universal LDS masks for ensemble training
+	@echo "🚀 Generating LDS masks"
+	@uv run python -m layertrak.lds.generate_masks \
+		--num-masks $(NUM_MASKS) \
+		--train-size $(TRAIN_SIZE) \
+		--subset-ratio $(SUBSET_RATIO) \
+		--seed $(SEED) \
+		$(if $(OUTPUT_DIR),--output-dir $(OUTPUT_DIR),)
+
 .PHONY: ensemble-train
 ensemble-train: ## Train ensemble of LDS-masked models (usage: make ensemble-train ARCH=resnet18 NUM_MASKS=20)
 	@echo "🚀 Training ensemble models"
 	@uv run python -m layertrak.experiments.train_ensemble $(if $(ARCH),--architecture $(ARCH)) $(if $(NUM_MASKS),--num-masks $(NUM_MASKS))
+
 
 .PHONY: experiment
 experiment: ## Run TRAK experiment for all models and layer configs
