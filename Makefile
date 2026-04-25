@@ -40,6 +40,11 @@ experiment: ## Run TRAK experiment for all models and layer configs
 	@echo "🚀 Running TRAK experiment"
 	@uv run python -m layertrak.experiments.run_trak
 
+.PHONY: visualize-trak
+visualize-trak: ## Generate plots for TRAK results. Optional: RUN_DIR=trak_results/2026-...
+	@echo "🚀 Visualizing TRAK results"
+	@uv run python -m layertrak.visualization.plot_trak_results $(if $(RUN_DIR),--run-dir $(RUN_DIR),)
+
 .PHONY: help
 help:
 	@uv run python -c "import re; \

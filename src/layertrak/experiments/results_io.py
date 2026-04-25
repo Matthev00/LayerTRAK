@@ -2,6 +2,7 @@ import csv
 import json
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -31,7 +32,7 @@ def score_stats(scores: np.ndarray) -> dict[str, float]:
     }
 
 
-def write_json(path: Path, payload: dict[str, object]) -> None:
+def write_json(path: Path, payload: dict[str, Any]) -> None:
     """Write a JSON payload with stable formatting."""
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 

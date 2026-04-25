@@ -1,10 +1,8 @@
 import argparse
 import csv
-import io
 import json
-import zipfile
 from collections.abc import Iterable
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from typing import Any
 
 import matplotlib.pyplot as plt
@@ -26,22 +24,13 @@ def _parse_args() -> argparse.Namespace:
         "--run-dir",
         type=Path,
         default=None,
-        help=(
-            "Path to a specific run directory. In --zip-path mode this is the run name inside "
-            "the archive. Defaults to the newest run with overview.csv."
-        ),
-    )
-    parser.add_argument(
-        "--zip-path",
-        type=Path,
-        default=None,
-        help="Optional trak_results.zip archive to read without extracting the full archive.",
+        help="Path to a specific run directory. Defaults to the newest directory in trak_results/.",
     )
     parser.add_argument(
         "--output-dir",
         type=Path,
         default=None,
-        help="Directory for generated plots. Defaults to <run-dir>/plots or trak_results/<zip-run>/plots.",
+        help="Directory for generated plots. Defaults to <run-dir>/plots.",
     )
     parser.add_argument(
         "--max-targets",
@@ -99,35 +88,10 @@ def _resolve_run_dir(run_dir: Path | None) -> Path:
     return candidates[-1]
 
 
-def _resolve_zip_run_name(zip_path: Path, run_dir: Path | None) -> str:
-    """Return a run name available inside a results zip archive."""
-    if run_dir is not None:
-        return run_dir.as_posix().strip("/")
-
-    with zipfile.ZipFile(zip_path) as archive:
-        candidates = sorted({
-            name.split("/", maxsplit=1)[0]
-            for name in archive.namelist()
-            if name.count("/") >= 1 and name.endswith("/overview.csv")
-        })
-
-    if not candidates:
-        raise FileNotFoundError(f"No run directories with overview.csv found in {zip_path}")
-    return candidates[-1]
-
-
 def _load_overview_from_path(path: Path) -> list[dict[str, str]]:
     """Load a run overview CSV file from the filesystem."""
     with path.open("r", newline="", encoding="utf-8") as handle:
         return list(csv.DictReader(handle))
-
-
-def _load_overview_from_zip(zip_path: Path, run_name: str) -> list[dict[str, str]]:
-    """Load a run overview CSV file from a zip archive."""
-    overview_name = f"{run_name}/overview.csv"
-    with zipfile.ZipFile(zip_path) as archive, archive.open(overview_name) as handle:
-        text = io.TextIOWrapper(handle, encoding="utf-8", newline="")
-        return list(csv.DictReader(text))
 
 
 def _load_summary(path: Path) -> dict[str, Any]:
@@ -135,22 +99,9 @@ def _load_summary(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _load_summary_from_zip(archive: zipfile.ZipFile, name: str) -> dict[str, Any]:
-    """Load the summary metadata for a single zipped configuration."""
-    return json.loads(archive.read(name).decode("utf-8"))
-
-
-def _make_output_dir(run_dir: Path | None, output_dir: Path | None, zip_run_name: str | None = None) -> Path:
+def _make_output_dir(run_dir: Path, output_dir: Path | None) -> Path:
     """Create and return the directory used for generated plots."""
-    if output_dir is not None:
-        resolved_output_dir = output_dir
-    elif run_dir is not None:
-        resolved_output_dir = run_dir / "plots"
-    elif zip_run_name is not None:
-        resolved_output_dir = settings.project_root / settings.trak_results_dir / zip_run_name / "plots"
-    else:
-        raise ValueError("Cannot infer output directory.")
-
+    resolved_output_dir = output_dir if output_dir is not None else run_dir / "plots"
     resolved_output_dir.mkdir(parents=True, exist_ok=True)
     return resolved_output_dir
 
@@ -162,7 +113,7 @@ def _config_sort_key(config_name: str) -> tuple[int, str]:
         return len(CONFIG_ORDER), config_name
 
 
-def _as_int(value: object, field_name: str) -> int:
+def _as_int(value: Any, field_name: str) -> int:
     if value is None:
         raise KeyError(f"Missing {field_name} in summary.json")
     return int(value)
@@ -218,13 +169,15 @@ def _score_stats(scores: np.ndarray) -> dict[str, float]:
     }
 
 
-def _write_json(path: Path, payload: dict[str, object]) -> None:
+def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
 def _top_indices_desc(values: np.ndarray, top_k: int) -> np.ndarray:
     """Return indices of the largest values sorted descending."""
     k = min(top_k, values.shape[0])
+    if k <= 0:
+        return np.array([], dtype=np.intp)
     indices = np.argpartition(values, -k)[-k:]
     return indices[np.argsort(values[indices])[::-1]]
 
@@ -232,6 +185,8 @@ def _top_indices_desc(values: np.ndarray, top_k: int) -> np.ndarray:
 def _top_indices_asc(values: np.ndarray, top_k: int) -> np.ndarray:
     """Return indices of the smallest values sorted ascending."""
     k = min(top_k, values.shape[0])
+    if k <= 0:
+        return np.array([], dtype=np.intp)
     indices = np.argpartition(values, k - 1)[:k]
     return indices[np.argsort(values[indices])]
 
@@ -304,7 +259,7 @@ def _plot_overview_metric(rows: list[dict[str, object]], metric: str, output_dir
             row = row_by_pair.get((arch, config_name))
             if row is None:
                 continue
-            values.append(float(row[metric]))
+            values.append(float(str(row[metric])))
             positions.append(float(x[arch_idx] + idx * width - (len(configs) - 1) * width / 2))
         ax.bar(positions, values, width=width, label=config_name)
 
@@ -335,7 +290,7 @@ def _plot_num_params(rows: list[dict[str, object]], output_dir: Path) -> None:
             row = row_by_pair.get((arch, config_name))
             if row is None:
                 continue
-            values.append(float(row["num_tracked_params"]))
+            values.append(float(str(row["num_tracked_params"])))
             positions.append(float(x[arch_idx] + idx * width - (len(configs) - 1) * width / 2))
         ax.bar(positions, values, width=width, label=config_name)
 
@@ -403,7 +358,8 @@ def _plot_topk_curve(scores: np.ndarray, output_path: Path, title: str) -> None:
 
 def _image_to_numpy(image: object) -> np.ndarray:
     """Convert a torchvision image tensor or PIL image to an HWC array."""
-    array = image.detach().cpu().numpy() if hasattr(image, "detach") else np.asarray(image)
+    detach = getattr(image, "detach", None)
+    array = detach().cpu().numpy() if callable(detach) else np.asarray(image)
 
     if array.ndim == 3 and array.shape[0] in (1, 3):
         array = np.moveaxis(array, 0, -1)
@@ -572,33 +528,32 @@ def _iter_filesystem_artifacts(run_dir: Path) -> Iterable[tuple[dict[str, Any], 
         yield summary, raw_scores
 
 
-def _iter_zip_artifacts(zip_path: Path, run_name: str) -> Iterable[tuple[dict[str, Any], np.ndarray]]:
-    """Yield summary and raw scores for each zipped configuration."""
-    with zipfile.ZipFile(zip_path) as archive:
-        summary_names = sorted(
-            name for name in archive.namelist() if name.startswith(f"{run_name}/") and name.endswith("/summary.json")
-        )
-        for summary_name in summary_names:
-            summary = _load_summary_from_zip(archive, summary_name)
-            config_dir = PurePosixPath(summary_name).parent
-            scores_name = str(config_dir / "scores.npy")
-            raw_scores = np.load(io.BytesIO(archive.read(scores_name)))
-            yield summary, raw_scores
-
-
 def _generate_overview_plots(rows: list[dict[str, object]], output_dir: Path) -> None:
     """Generate corrected overview CSV and plots."""
     rows = sorted(rows, key=lambda row: (str(row["architecture"]), _config_sort_key(str(row["config_name"]))))
+    _warn_missing_configs(rows)
     _write_overview_csv(output_dir / "overview_corrected.csv", rows)
     _plot_num_params(rows, output_dir)
     for metric in OVERVIEW_METRICS:
         _plot_overview_metric(rows, metric, output_dir)
 
 
+def _warn_missing_configs(rows: list[dict[str, object]]) -> None:
+    """Print architectures that are missing configs present in the same run."""
+    configs_by_arch: dict[str, set[str]] = {}
+    for row in rows:
+        configs_by_arch.setdefault(str(row["architecture"]), set()).add(str(row["config_name"]))
+
+    expected_configs = set().union(*configs_by_arch.values()) if configs_by_arch else set()
+    for architecture, configs in sorted(configs_by_arch.items()):
+        missing = sorted(expected_configs - configs, key=_config_sort_key)
+        if missing:
+            print(f"Missing configuration artifact(s) for {architecture}: {', '.join(missing)}")
+
+
 def generate_plots(
     *,
     run_dir: Path | None = None,
-    zip_path: Path | None = None,
     output_dir: Path | None = None,
     max_targets: int = 25,
     max_train_samples: int = 100,
@@ -612,23 +567,14 @@ def generate_plots(
     raw_cifar10 = None if skip_extremes else _load_raw_cifar10()
     corrected_rows: list[dict[str, object]] = []
 
-    if zip_path is not None:
-        run_name = _resolve_zip_run_name(zip_path, run_dir)
-        try:
-            _load_overview_from_zip(zip_path, run_name)
-        except KeyError:
-            print(f"Missing overview.csv for {run_name} in {zip_path}; using summary.json files instead.")
-        resolved_output_dir = _make_output_dir(None, output_dir, zip_run_name=run_name)
-        artifacts = _iter_zip_artifacts(zip_path, run_name)
+    resolved_run_dir = _resolve_run_dir(run_dir)
+    overview_path = resolved_run_dir / "overview.csv"
+    if overview_path.exists():
+        _load_overview_from_path(overview_path)
     else:
-        resolved_run_dir = _resolve_run_dir(run_dir)
-        overview_path = resolved_run_dir / "overview.csv"
-        if overview_path.exists():
-            _load_overview_from_path(overview_path)
-        else:
-            print(f"Missing overview.csv in {resolved_run_dir}; using summary.json files instead.")
-        resolved_output_dir = _make_output_dir(resolved_run_dir, output_dir)
-        artifacts = _iter_filesystem_artifacts(resolved_run_dir)
+        print(f"Missing overview.csv in {resolved_run_dir}; using summary.json files instead.")
+    resolved_output_dir = _make_output_dir(resolved_run_dir, output_dir)
+    artifacts = _iter_filesystem_artifacts(resolved_run_dir)
 
     for summary, raw_scores in artifacts:
         corrected_rows.append(
@@ -658,7 +604,6 @@ def main() -> None:
     args = _parse_args()
     output_dir = generate_plots(
         run_dir=args.run_dir,
-        zip_path=args.zip_path,
         output_dir=args.output_dir,
         max_targets=args.max_targets,
         max_train_samples=args.max_train_samples,
