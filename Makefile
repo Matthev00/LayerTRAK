@@ -56,6 +56,17 @@ ensemble-train: ## Train ensemble of LDS-masked models (usage: make ensemble-tra
 	@echo "🚀 Training ensemble models"
 	@uv run python -m layertrak.experiments.train_ensemble $(if $(ARCH),--architecture $(ARCH)) $(if $(NUM_MASKS),--num-masks $(NUM_MASKS))
 
+.PHONY: extract-ensemble
+ARCH ?= resnet18
+NUM_MASKS ?= 40
+extract-ensemble: ## Extract logits from ensemble models (usage: make extract-ensemble ARCH=resnet18 NUM_MASKS=40)
+	@echo "🚀 Extracting ensemble model outputs"
+	@uv run python -m layertrak.lds.extract_ensemble_outputs --architecture $(ARCH) --num-masks $(NUM_MASKS)
+
+.PHONY: compute-lds
+compute-lds: ## Compute LDS scores for all architectures and layer configurations
+	@echo "🚀 Computing LDS scores"
+	@uv run python -m layertrak.lds.compute_lds
 
 .PHONY: experiment
 experiment: ## Run TRAK experiment for all models and layer configs
