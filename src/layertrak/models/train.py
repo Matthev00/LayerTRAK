@@ -2,10 +2,10 @@ from pathlib import Path
 
 import torch
 import torch.nn as nn
+import wandb
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-import wandb
 from layertrak.settings import settings
 
 

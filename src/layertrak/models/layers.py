@@ -7,7 +7,7 @@ class LayerConfig(TypedDict):
     """A named TRAK layer configuration."""
 
     name: str
-    prefixes: list[str]
+    prefixes: list[str] | None
 
 
 def _feature_prefixes(start: int, end: int) -> list[str]:
@@ -20,6 +20,7 @@ RESNET_LAYER_CONFIGS: list[LayerConfig] = [
     {"name": "late", "prefixes": ["layer4.", "fc."]},
     {"name": "mid_late", "prefixes": ["layer3."]},
     {"name": "early", "prefixes": ["conv1.", "layer1."]},
+    {"name": "full_model", "prefixes": None},
 ]
 
 MOBILENETV2_LAYER_CONFIGS: list[LayerConfig] = [
@@ -27,6 +28,7 @@ MOBILENETV2_LAYER_CONFIGS: list[LayerConfig] = [
     {"name": "late", "prefixes": [*_feature_prefixes(14, 19), "classifier."]},
     {"name": "mid_late", "prefixes": _feature_prefixes(7, 14)},
     {"name": "early", "prefixes": _feature_prefixes(0, 7)},
+    {"name": "full_model", "prefixes": None},
 ]
 
 _CONFIGS_BY_ARCH: dict[str, list[LayerConfig]] = {
@@ -51,14 +53,19 @@ def get_layer_configs(arch: str) -> list[LayerConfig]:
     return _CONFIGS_BY_ARCH[arch]
 
 
-def get_grad_wrt(model: nn.Module, prefixes: list[str]) -> list[str]:
+def get_grad_wrt(model: nn.Module, prefixes: list[str] | None) -> list[str] | None:
     """Return parameter names matching any of the given prefixes.
 
     Args:
         model: PyTorch model.
         prefixes: List of parameter name prefixes to match.
+            If None, gradients are computed for the full model.
 
     Returns:
         List of matching parameter names for use with TRAKer's grad_wrt.
+        Returns None for the full-model baseline.
     """
+    if prefixes is None:
+        return None
+
     return [name for name, _ in model.named_parameters() if any(name.startswith(p) for p in prefixes)]

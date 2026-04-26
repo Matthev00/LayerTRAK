@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     momentum: float = 0.9
 
     trak_proj_dim: int = 1024
+    trak_lambda_reg: float = 1e-3
     num_targets: int = 1000
 
     wandb_project: str = "LayerTRAK"
