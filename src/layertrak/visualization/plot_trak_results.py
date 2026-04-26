@@ -137,8 +137,27 @@ def _normalize_scores(scores: np.ndarray, summary: dict[str, Any]) -> np.ndarray
     return normalized.astype(np.float64, copy=False)
 
 
+def _finite_scores(scores: np.ndarray) -> np.ndarray:
+    """Return a finite copy of scores for plotting and derived summaries."""
+    finite_mask = np.isfinite(scores)
+    if finite_mask.all():
+        return scores
+
+    finite_values = scores[finite_mask]
+    if finite_values.size == 0:
+        return np.zeros_like(scores, dtype=np.float64)
+
+    return np.nan_to_num(
+        scores,
+        nan=0.0,
+        posinf=float(finite_values.max()),
+        neginf=float(finite_values.min()),
+    )
+
+
 def _score_stats(scores: np.ndarray) -> dict[str, float]:
     """Compute stable statistics for target x train scores."""
+    scores = _finite_scores(scores)
     values = scores.ravel()
     abs_values = np.abs(values)
     top_sorted = np.sort(scores, axis=1)
@@ -474,7 +493,7 @@ def _generate_config_plots(
     """Generate all per-configuration plots and corrected CSV artifacts."""
     architecture = str(summary["architecture"])
     config_name = str(summary["config_name"])
-    scores = _normalize_scores(raw_scores, summary)
+    scores = _finite_scores(_normalize_scores(raw_scores, summary))
 
     config_output_dir = output_dir / architecture / config_name
     config_output_dir.mkdir(parents=True, exist_ok=True)
