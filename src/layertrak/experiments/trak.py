@@ -29,6 +29,7 @@ class LayerTRAKRunner:
         save_dir: Path | str,
         device: str | None = None,
         proj_dim: int | None = None,
+        lambda_reg: float | None = None,
         grad_wrt: list[str] | None = None,
     ):
         """Initialize the TRAK runner.
@@ -40,10 +41,12 @@ class LayerTRAKRunner:
             save_dir: Directory for TRAK intermediate results.
             device: Training device. If MPS, TRAK runs on CPU instead.
             proj_dim: Random projection dimension. Defaults to settings.
+            lambda_reg: Diagonal regularization for TRAK's X^T X inverse.
             grad_wrt: List of parameter names to compute gradients for.
         """
         self._save_dir = Path(save_dir)
         self._proj_dim = proj_dim or settings.trak_proj_dim
+        self._lambda_reg = settings.trak_lambda_reg if lambda_reg is None else lambda_reg
 
         source_device = device or settings.device
         self._trak_device = "cpu" if source_device == "mps" else source_device
@@ -64,6 +67,7 @@ class LayerTRAKRunner:
             device=self._trak_device,
             proj_dim=self._proj_dim,
             grad_wrt=grad_wrt,
+            lambda_reg=self._lambda_reg,
         )
 
     def _cast_batch(self, batch: list[torch.Tensor]) -> list[torch.Tensor]:
