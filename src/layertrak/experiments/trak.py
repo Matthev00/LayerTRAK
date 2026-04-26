@@ -8,8 +8,43 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from trak import TRAKer
+from trak.score_computers import BasicScoreComputer
 
 from layertrak.settings import settings
+
+
+class RobustScoreComputer(BasicScoreComputer):
+    """Score computer that falls back to pseudo-inverse for singular X^T X."""
+
+    def get_x_xtx_inv(self, grads: torch.Tensor, xtx: torch.Tensor) -> torch.Tensor:
+        blocks = torch.split(grads, split_size_or_sections=self.CUDA_MAX_DIM_SIZE, dim=0)
+
+        xtx_float = xtx.to(torch.float32)
+        xtx_reg = xtx_float + self.lambda_reg * torch.eye(
+            xtx_float.size(dim=0),
+            device=xtx_float.device,
+            dtype=xtx_float.dtype,
+        )
+        xtx_reg = torch.nan_to_num(xtx_reg, nan=0.0, posinf=1e6, neginf=-1e6)
+
+        try:
+            xtx_inv = torch.linalg.inv(xtx_reg)
+        except torch._C._LinAlgError:
+            xtx_inv = torch.linalg.pinv(xtx_reg, hermitian=True)
+
+        scale = xtx_inv.abs().mean()
+        if torch.isfinite(scale) and scale > 0:
+            xtx_inv = xtx_inv / scale
+
+        xtx_inv = xtx_inv.to(self.dtype)
+        result = torch.empty(grads.shape[0], xtx_inv.shape[1], dtype=self.dtype, device=self.device)
+
+        for i, block in enumerate(blocks):
+            start = i * self.CUDA_MAX_DIM_SIZE
+            end = min(grads.shape[0], (i + 1) * self.CUDA_MAX_DIM_SIZE)
+            result[start:end] = block.to(self.device) @ xtx_inv
+
+        return result
 
 
 class LayerTRAKRunner:
@@ -68,6 +103,7 @@ class LayerTRAKRunner:
             proj_dim=self._proj_dim,
             grad_wrt=grad_wrt,
             lambda_reg=self._lambda_reg,
+            score_computer=RobustScoreComputer,
         )
 
     def _cast_batch(self, batch: list[torch.Tensor]) -> list[torch.Tensor]:
