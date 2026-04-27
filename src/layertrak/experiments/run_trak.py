@@ -41,6 +41,15 @@ def run_experiment() -> dict[str, dict[str, np.ndarray]]:
     checkpoint_paths = _resolve_checkpoint_paths()
     train_loader, _, targets_loader = get_dataloaders()
     train_set_size = len(train_loader.dataset)  # type: ignore[arg-type]
+
+    from torch.utils.data import DataLoader
+    trak_train_loader = DataLoader(
+        train_loader.dataset,
+        batch_size=settings.batch_size,
+        shuffle=False, 
+        num_workers=settings.num_workers
+    )
+
     results_root = settings.project_root / settings.trak_results_dir
     results_root.mkdir(parents=True, exist_ok=True)
     run_dir = make_run_dir(results_root)
@@ -81,7 +90,7 @@ def run_experiment() -> dict[str, dict[str, np.ndarray]]:
                 device=settings.device,
                 grad_wrt=grad_wrt,
             )
-            runner.featurize(train_loader)
+            runner.featurize(trak_train_loader)
             scores = runner.score(
                 targets_loader,
                 num_targets=settings.num_targets,
