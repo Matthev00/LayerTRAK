@@ -1,5 +1,6 @@
 """Computing LDS (Linear Datamodeling Score) correlation for all models and layers."""
 
+import argparse
 import json
 from pathlib import Path
 
@@ -41,8 +42,14 @@ def compute_margins(logits: np.ndarray, labels: np.ndarray) -> np.ndarray:
     return correct_logits - max_other_logits
 
 
-def get_latest_trak_run() -> Path:
-    """Automatically find the TRAK results folder (handles both timestamped and flat structures)."""
+def get_trak_run_dir(trak_dir: Path | None = None) -> Path:
+    """Find the TRAK results folder. If trak_dir is provided, use it; otherwise auto-detect."""
+    if trak_dir is not None:
+        if not trak_dir.exists():
+            raise FileNotFoundError(f"Specified TRAK directory does not exist: {trak_dir}")
+        return trak_dir
+    
+    # Auto-detect logic
     trak_results_dir = settings.project_root / settings.trak_results_dir
     if not trak_results_dir.exists():
         raise FileNotFoundError(f"Missing TRAK results folder: {trak_results_dir}")
@@ -62,7 +69,7 @@ def get_latest_trak_run() -> Path:
     return runs[-1]
 
 
-def compute_lds_for_all() -> None:
+def compute_lds_for_all(trak_dir: Path | None = None) -> None:
     """Main function to compute the LDS metric."""
 
     # 1. Load constant, fixed data from disk
@@ -78,13 +85,21 @@ def compute_lds_for_all() -> None:
     masks = np.load(masks_path).astype(np.float32)  # Shape: [num_masks, train_size]
     labels = np.load(labels_path)  # Shape: [num_targets]
 
-    trak_run_dir = get_latest_trak_run()
+    trak_run_dir = get_trak_run_dir(trak_dir)
     print(f"Using TRAK results from folder: {trak_run_dir.name}")
 
     final_results = {}
 
     # 2. Find all architectures (resnet18, resnet34, mobilenetv2) computed by TRAK
-    architectures = [d.name for d in trak_run_dir.iterdir() if d.is_dir()]
+    potential_archs = ["resnet18", "resnet34", "mobilenetv2"]
+    child_dirs = [d for d in trak_run_dir.iterdir() if d.is_dir()]
+    architectures = [d.name for d in child_dirs if d.name in potential_archs]
+    single_arch = False
+
+    if not architectures:
+        # The provided folder may already be a single architecture folder.
+        architectures = [trak_run_dir.name]
+        single_arch = True
 
     for arch in architectures:
         print(f"\n{'=' * 55}\nAnalysis: {arch.upper()}\n{'=' * 55}")
@@ -105,11 +120,12 @@ def compute_lds_for_all() -> None:
         actual_margins = compute_margins(logits, labels)  # Shape: [num_masks, num_targets]
 
         arch_results = {}
-        configs = [d.name for d in (trak_run_dir / arch).iterdir() if d.is_dir()]
+        config_root = trak_run_dir if single_arch else trak_run_dir / arch
+        configs = [d.name for d in config_root.iterdir() if d.is_dir()]
 
         # 3. Iterate over each layer configuration (head_only, early, etc.)
         for config in configs:
-            scores_path = trak_run_dir / arch / config / "scores.npy"
+            scores_path = config_root / config / "scores.npy"
             if not scores_path.exists():
                 continue
 
@@ -152,4 +168,14 @@ def compute_lds_for_all() -> None:
 
 
 if __name__ == "__main__":
-    compute_lds_for_all()
+    parser = argparse.ArgumentParser(description="Compute LDS scores for TRAK results.")
+    parser.add_argument(
+        "--trak-dir",
+        type=str,
+        default=None,
+        help="Path to TRAK results directory. If not specified, auto-detect the latest."
+    )
+    args = parser.parse_args()
+    
+    trak_dir = Path(args.trak_dir) if args.trak_dir else None
+    compute_lds_for_all(trak_dir)
