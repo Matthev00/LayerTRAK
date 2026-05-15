@@ -56,13 +56,13 @@ ensemble-train: ## Train ensemble of LDS-masked models (usage: make ensemble-tra
 	@echo "🚀 Training ensemble models"
 	@uv run python -m layertrak.experiments.train_ensemble $(if $(ARCH),--architecture $(ARCH)) $(if $(NUM_MASKS),--num-masks $(NUM_MASKS))
 
-# .PHONY: ensemble-train-all
-# ensemble-train-all: ## Train all architectures sequentially (resnet18 → resnet34 → mobilenetv2)
-# 	@echo "🚀 Training ensemble: all architectures sequentially (NUM_MASKS=$(NUM_MASKS))"
-# 	@make ensemble-train ARCH=resnet18 NUM_MASKS=$(NUM_MASKS) && \
-# 	 make ensemble-train ARCH=resnet34 NUM_MASKS=$(NUM_MASKS) && \
-# 	 make ensemble-train ARCH=mobilenetv2 NUM_MASKS=$(NUM_MASKS)
-# 	@echo "✓ All ensemble training complete!"
+.PHONY: ensemble-train-all
+ensemble-train-all: ## Train all architectures sequentially (resnet18 → resnet34 → mobilenetv2)
+	@echo "🚀 Training ensemble: all architectures sequentially (NUM_MASKS=$(NUM_MASKS))"
+	@make ensemble-train ARCH=resnet18 NUM_MASKS=$(NUM_MASKS) && \
+	 make ensemble-train ARCH=resnet34 NUM_MASKS=$(NUM_MASKS) && \
+	 make ensemble-train ARCH=mobilenetv2 NUM_MASKS=$(NUM_MASKS)
+	@echo "✓ All ensemble training complete!"
 
 .PHONY: extract-ensemble
 ARCH ?= resnet18
@@ -70,6 +70,15 @@ NUM_MASKS ?= 40
 extract-ensemble: ## Extract logits from ensemble models (usage: make extract-ensemble ARCH=resnet18 NUM_MASKS=40)
 	@echo "🚀 Extracting ensemble model outputs"
 	@uv run python -m layertrak.lds.extract_ensemble_outputs --architecture $(ARCH) --num-masks $(NUM_MASKS)
+
+.PHONY: extract-ensemble-all
+NUM_MASKS ?= 40
+extract-ensemble-all: ## Extract logits from all ensemble architectures (resnet18 → resnet34 → mobilenetv2)
+	@echo "🚀 Extracting ensemble outputs: all architectures sequentially (NUM_MASKS=$(NUM_MASKS))"
+	@make extract-ensemble ARCH=resnet18 NUM_MASKS=$(NUM_MASKS) && \
+	 make extract-ensemble ARCH=resnet34 NUM_MASKS=$(NUM_MASKS) && \
+	 make extract-ensemble ARCH=mobilenetv2 NUM_MASKS=$(NUM_MASKS)
+	@echo "✓ All ensemble extraction complete!"
 
 .PHONY: compute-lds
 TRAK_DIR ?=
