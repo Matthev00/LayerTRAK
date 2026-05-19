@@ -1,69 +1,74 @@
 # LayerTRAK
 
-[![Release](https://img.shields.io/github/v/release/SIWY-2026/LayerTRAK)](https://img.shields.io/github/v/release/SIWY-2026/LayerTRAK)
-[![Build status](https://img.shields.io/github/actions/workflow/status/SIWY-2026/LayerTRAK/main.yml?branch=main)](https://github.com/SIWY-2026/LayerTRAK/actions/workflows/main.yml?query=branch%3Amain)
-[![codecov](https://codecov.io/gh/SIWY-2026/LayerTRAK/branch/main/graph/badge.svg)](https://codecov.io/gh/SIWY-2026/LayerTRAK)
-[![Commit activity](https://img.shields.io/github/commit-activity/m/SIWY-2026/LayerTRAK)](https://img.shields.io/github/commit-activity/m/SIWY-2026/LayerTRAK)
-[![License](https://img.shields.io/github/license/SIWY-2026/LayerTRAK)](https://img.shields.io/github/license/SIWY-2026/LayerTRAK)
+Layer-selective data attribution with [TRAK](https://github.com/MadryLab/trak) on CIFAR-10.
 
-Evaluating Data Attribution with TRAK on Targeted Layers of Residual Networks
+- **Documentation (PDF):** [docs/final_doc.pdf](docs/final_doc.pdf)
+- **Literature analysis:** [docs/literature_analysis.md](docs/literature_analysis.md)
+- **Github repository:** <https://github.com/Matthev00/LayerTRAK>
 
-- **Github repository**: <https://github.com/SIWY-2026/LayerTRAK/>
-- **Documentation** <https://SIWY-2026.github.io/LayerTRAK/>
+LayerTRAK investigates how restricting TRAK to a chosen subset of a network's parameters affects the quality of training-data attribution. Experiments run on **CIFAR-10** across three architectures - **ResNet-18**, **ResNet-34**, and **MobileNetV2** - each evaluated under five layer configurations: `head_only`, `late`, `mid_late`, `early`, and `full_model`. Attribution quality is measured with **LDS (Linear Datamodeling Score)**.
 
-## Getting started with your project
+## Layer configurations
 
-### 1. Create a New Repository
+| Config | ResNet-18 / ResNet-34 | MobileNetV2 |
+|---|---|---|
+| `head_only` | `fc` | `classifier` |
+| `late` | `layer4` + `fc` | `features[14:19]` + `classifier` |
+| `mid_late` | `layer3` | `features[7:14]` |
+| `early` | `conv1` + `layer1` | `features[0:7]` |
+| `full_model` | all parameters | all parameters |
 
-First, create a repository on GitHub with the same name as this project, and then run the following commands:
+## Project structure
 
-```bash
-git init -b main
-git add .
-git commit -m "init commit"
-git remote add origin git@github.com:SIWY-2026/LayerTRAK.git
-git push -u origin main
+```
+src/layertrak/
+├── settings.py          # Pydantic-Settings config (reads from .env)
+├── data.py              # CIFAR-10 data pipeline
+├── experiments/         # TRAK runner (LayerTRAKRunner) + training scripts
+├── models/              # model_factory, ResNet/MobileNetV2 wrappers, layers.py
+├── lds/                 # mask generation, ensemble training helpers, LDS computation
+└── visualization/       # plot_trak_results - all figures from the paper
 ```
 
-### 2. Set Up Your Development Environment
+Key files:
+- `experiments/trak.py` - `LayerTRAKRunner` wraps `TRAKer` and exposes the `grad_wrt` parameter that controls which layers are traced.
+- `models/layers.py` - defines `RESNET_LAYER_CONFIGS` / `MOBILENETV2_LAYER_CONFIGS` and `get_grad_wrt()` which maps a config name to the exact parameter list.
+- `lds/compute_lds.py` - computes Spearman rank correlation between predicted and actual model margins.
 
-Then, install the environment and the pre-commit hooks with
+## Quickstart
 
-```bash
-make install
-```
-
-This will also generate your `uv.lock` file
-
-### 3. Run the pre-commit hooks
-
-Initially, the CI/CD pipeline might be failing due to formatting issues. To resolve those run:
+**Requirements:** Python 3.12+, [uv](https://github.com/astral-sh/uv), CUDA GPU recommended.
 
 ```bash
-uv run pre-commit run -a
+make install          # create venv and install dependencies
+make train            # fine-tune ResNet-18, ResNet-34, MobileNetV2 on CIFAR-10
+make masks            # generate 40 random subset masks for LDS
+make ensemble-train-all   # train 40 auxiliary models per architecture
+make extract-ensemble-all # extract logits from the ensemble
+make experiment       # run TRAK for all architectures × all layer configs
+make compute-lds      # compute LDS scores
+make visualize-trak   # generate all plots
 ```
 
-### 4. Commit the changes
+## Configuration
 
-Lastly, commit the changes made by the two steps above to your repository.
+All settings live in `src/layertrak/settings.py` and can be overridden via a `.env` file or environment variables:
 
-```bash
-git add .
-git commit -m 'Fix formatting issues'
-git push origin main
-```
+| Variable | Default | Description |
+|---|---|---|
+| `DEVICE` | `cuda` / `cpu` | Training device |
+| `NUM_EPOCHS` | `30` | Base model training epochs |
+| `BATCH_SIZE` | `128` | Batch size |
+| `TRAK_PROJ_DIM` | `1024` | Random projection dimension |
+| `TRAK_LAMBDA_REG` | `1e-3` | TRAK regularization λ |
+| `NUM_TARGETS` | `1000` | Test samples evaluated for TRAK scores |
 
-You are now ready to start development on your project!
-The CI/CD pipeline will be triggered when you open a pull request, merge to main, or when you create a new release.
+## Results summary
 
-To finalize the set-up for publishing to PyPI, see [here](https://fpgmaas.github.io/cookiecutter-uv/features/publishing/#set-up-for-pypi).
-For activating the automatic documentation with MkDocs, see [here](https://fpgmaas.github.io/cookiecutter-uv/features/mkdocs/#enabling-the-documentation-on-github).
-To enable the code coverage reports, see [here](https://fpgmaas.github.io/cookiecutter-uv/features/codecov/).
+`head_only` achieves the highest LDS across all three architectures. Adding earlier layers consistently degrades attribution quality.
 
-## Releasing a new version
-
-
-
----
-
-Repository initiated with [osprey-oss/cookiecutter-uv](https://github.com/osprey-oss/cookiecutter-uv).
+| Architecture | head_only | late | full_model | mid_late | early |
+|---|---|---|---|---|---|
+| ResNet-18 | **0.0863** | 0.0582 | 0.0445 | 0.0329 | 0.0138 |
+| ResNet-34 | **0.0910** | 0.0567 | 0.0342 | 0.0209 | 0.0026 |
+| MobileNetV2 | **0.0953** | 0.0703 | 0.0368 | 0.0316 | 0.0064 |
